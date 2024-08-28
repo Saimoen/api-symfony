@@ -1,12 +1,9 @@
 <?php
-
-// src/Service/TodoService.php
 namespace App\Service;
 
 use App\Entity\Todo;
 use App\Repository\TodoRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpFoundation\Response;
 
 class TodoService
 {
@@ -96,7 +93,7 @@ class TodoService
         return $queryBuilder->getQuery()->getResult();
     }
 
-    public function findTodoById(int $id): ?Todo
+    public function findTodoById(int $id)
     {
         return $this->todoRepository->find($id);
     }

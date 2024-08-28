@@ -32,6 +32,21 @@ class TodoController extends AbstractController
         return $this->json($todos);
     }
 
+    #[Route("/read/todo/{id}", methods: ["GET"])]
+    public function getTaskById(int $id): \Symfony\Component\HttpFoundation\JsonResponse
+    {
+        // Récupérer le Todo par ID
+        $todo = $this->todoService->findTodoById($id);
+
+        // Vérifier si le Todo existe
+        if (!$todo) {
+            return $this->json(['error' => 'Todo not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Retourner les données du Todo sous forme de JSON
+        return $this->json($todo);
+    }
+
     #[Route("/create/todo", methods: ["POST"])]
     public function create(Request $request): \Symfony\Component\HttpFoundation\JsonResponse
     {
