@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Service;
 
 use App\Entity\Todo;
@@ -14,6 +15,36 @@ class TodoService
     {
         $this->todoRepository = $todoRepository;
         $this->entityManager = $entityManager;
+    }
+
+    public function findTodos(string $titleFilter, string $descriptionFilter, string $sortField, string $sortOrder): array
+    {
+        $queryBuilder = $this->entityManager->getRepository(Todo::class)->createQueryBuilder('t');
+
+        if (!empty($titleFilter)) {
+            $queryBuilder->andWhere('t.title LIKE :title')
+                ->setParameter('title', '%' . $titleFilter . '%');
+        }
+
+        if (!empty($descriptionFilter)) {
+            $queryBuilder->andWhere('t.descriptionLongue LIKE :description')
+                ->setParameter('description', '%' . $descriptionFilter . '%');
+        }
+
+        // Validation des paramètres de tri
+        $validSortFields = ['title', 'descriptionLongue', 'dueAt', 'createdAt', 'updatedAt'];
+        if (!in_array($sortField, $validSortFields, true)) {
+            $sortField = 'dueAt'; // Valeur par défaut
+        }
+
+        $validSortOrders = ['asc', 'desc'];
+        if (!in_array($sortOrder, $validSortOrders, true)) {
+            $sortOrder = 'asc'; // Valeur par défaut
+        }
+
+        $queryBuilder->orderBy('t.' . $sortField, $sortOrder);
+
+        return $queryBuilder->getQuery()->getResult();
     }
 
     public function createTodo(array $data): Todo
@@ -74,7 +105,7 @@ class TodoService
         $this->entityManager->flush();
     }
 
-    public function filterAndSortTodos($titleFilter = '', $descriptionFilter = '', $sortField = 'createdAt', $sortOrder = 'asc')
+    public function filterAndSortTodos($titleFilter = '', $descriptionFilter = '', $sortField = 'dueAt', $sortOrder = 'asc')
     {
         $queryBuilder = $this->todoRepository->createQueryBuilder('t');
 

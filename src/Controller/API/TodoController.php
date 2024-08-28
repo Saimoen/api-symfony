@@ -3,7 +3,7 @@
 // src/Controller/API/TodoController.php
 namespace App\Controller\API;
 
-use App\Entity\Todo;
+use App\Repository\TodoRepository;
 use App\Service\TodoService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,16 +20,10 @@ class TodoController extends AbstractController
     }
 
     #[Route("/read/todo", methods: ["GET"])]
-    public function index(Request $request): \Symfony\Component\HttpFoundation\JsonResponse
+    public function index(Request $request, TodoRepository $todoRepository): \Symfony\Component\HttpFoundation\JsonResponse
     {
-        $titleFilter = $request->query->get('title', '');
-        $descriptionFilter = $request->query->get('description', '');
-        $sortField = $request->query->get('sortField', 'createdAt');
-        $sortOrder = $request->query->get('sortOrder', 'asc');
-
-        $todos = $this->todoService->filterAndSortTodos($titleFilter, $descriptionFilter, $sortField, $sortOrder);
-
-        return $this->json($todos);
+        $todo = $todoRepository->findAll();
+        return $this->json($todo);
     }
 
     #[Route("/read/todo/{id}", methods: ["GET"])]
@@ -40,11 +34,58 @@ class TodoController extends AbstractController
 
         // Vérifier si le Todo existe
         if (!$todo) {
-            return $this->json(['error' => 'Todo not found'], Response::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'La tâche n\'existe pas'], Response::HTTP_NOT_FOUND);
         }
 
         // Retourner les données du Todo sous forme de JSON
         return $this->json($todo);
+    }
+
+    #[Route("/filter/todo", methods: ["GET"])]
+    public function filterTodos(
+        Request        $request,
+        TodoRepository $todoRepository
+    ): \Symfony\Component\HttpFoundation\JsonResponse
+    {
+        $titleFilter = $request->query->get('title', '');
+        $descriptionFilter = $request->query->get('description', '');
+
+        $queryBuilder = $todoRepository->createQueryBuilder('t');
+
+        if (!empty($titleFilter)) {
+            $queryBuilder->andWhere('t.title LIKE :title')
+                ->setParameter('title', '%' . $titleFilter . '%');
+        }
+
+        if (!empty($descriptionFilter)) {
+            $queryBuilder->andWhere('t.descriptionLongue LIKE :description')
+                ->setParameter('description', '%' . $descriptionFilter . '%');
+        }
+
+        $todos = $queryBuilder->getQuery()->getResult();
+
+        return $this->json($todos);
+    }
+
+    #[Route("/sort/todo", methods: ["GET"])]
+    public function sortTodos(
+        Request        $request,
+        TodoRepository $todoRepository
+    ): \Symfony\Component\HttpFoundation\JsonResponse
+    {
+        $sortOrder = $request->query->get('sortOrder', 'asc'); // Par défaut, tri croissant
+
+        if (!in_array($sortOrder, ['asc', 'desc'])) {
+            return $this->json(['error' => 'Invalid sortOrder value'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $queryBuilder = $todoRepository->createQueryBuilder('t');
+
+        $queryBuilder->orderBy('t.dueAt', $sortOrder);
+
+        $todos = $queryBuilder->getQuery()->getResult();
+
+        return $this->json($todos);
     }
 
     #[Route("/create/todo", methods: ["POST"])]
